@@ -1,45 +1,81 @@
 //--------------------------------------------------------------Librerías---------------------------------------------------------------------------------------------------------
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
+
+
+
+
 #include <BluetoothSerial.h>
 
 //--------------------------------------------------------------Definición de variables-------------------------------------------------------------------------------------------
 #define botonAceptar 26
 #define botonCancelar 25
-#define buzzer 17
-#define termometro1 16
-#define termometro2 27
-#define flujometro1 14
-#define flujometro2 12
-char recepcion;
-char directiva;
-bool error=false;
+#define flujometro1 17
+#define flujometro2 16
+#define trig 27
+#define eco 14
+#define termometros 12
+#define ledBT 13
+#define ledDirectiva 5
+#define ledResistencia 23
+#define buzzer 19
+//queda el pin 18 vacante
+
+
+//Declración de variables globales auxiliares del programa
+String comando="";
+char caracter=0;
+bool nuevaLinea=false;
+String recepcion;
+char operacion;
+String parametro;
+
+
+//Declaración de objetos inherentes a las librerías de clases utilizadas
 BluetoothSerial SerialBT;
 LiquidCrystal_I2C lcd (0x3f,20,4);
 
 //--------------------------------------------------------------Inicialización-----------------------------------------------------------------------------------------------------
 void setup() {
+  //Inicio BT
   SerialBT.begin("Cerveceria");
+  
+  //Inicio Monitor Serial
   Serial.begin(115200);
+
+  //Inicio Comunicación I2C
   Wire.begin();
+
+  //Inicio Pantalla LCD de 20x4
   lcd.begin(20,4);
   lcd.clear();
   lcd.backlight();
-
-  pinMode(botonAceptar,OUTPUT);
-  pinMode(botonCancelar,OUTPUT);
-  pinMode(buzzer,OUTPUT);
-  pinMode(termometro1,INPUT);
-  pinMode(termometro2,INPUT);
+  
+  //Inicio de pines de entrada
+  pinMode(botonAceptar,INPUT);
+  pinMode(botonCancelar,INPUT);
   pinMode(flujometro1,INPUT);
   pinMode(flujometro2,INPUT);
+  pinMode(termometros,INPUT);
+  pinMode(eco,INPUT);
+
+  //Inicio de pines de Salida
+  pinMode(trig, OUTPUT);
+  pinMode(ledBT,OUTPUT);
+  pinMode(ledBT,OUTPUT);
+  pinMode(ledResistencia,OUTPUT);
+  pinMode(buzzer,OUTPUT);
+ 
+  
        
   
 }
 
 //--------------------------------------------------------------Programa----------------------------------------------------------------------------------------------------------
 void loop() {
-    
+
+
+    /* Directivas si es que no se ha recibido ninguna instreucción por bluetoot*/
  while(SerialBT.available()==0){
   lcd.clear();
   lcd.print("Esperando Directiva");
@@ -49,70 +85,144 @@ void loop() {
   delay(500);
  }
 
- if(SerialBT.available()>0){
-  recepcion=SerialBT.read();
 
-   switch(recepcion){
+
+
+
+/*Directivas en caso de que se hayan recibido directivas Bluettoth*/
+ while(SerialBT.available()>0){
+
+  //algoritmo para concatenar los caracteres recibidos en una cadena de String, la cual posteriormente se procesará para extraer la operación solicitada y los parámetros asociados
+    caracter=SerialBT.read();
+    if(caracter=='\r'){
+      continue;
+      
+    }else if(caracter=='\n'){
+      nuevaLinea=true;
+      break;
+      
+    }else{
+      comando=comando+caracter;
+    }
+ }
+
+ if(nuevaLinea){
+      nuevaLinea=false;
+      recepcion=comando;
+      comando="";
+      
+    }
+
+
+//comprobación prescindible inicio
+Serial.print("comando: ");
+Serial.println(comando);
+Serial.print("recepción: ");
+Serial.println(recepcion);
+//comprobación prescindible fin
    
-      case  'a': mensajePantalla("INGRESO","AGUA SIN FILTRAR");
-                   
-      break;
+  //Tratamiento del String recibido para poder decodificar la información que éste trae asociada.
+  operacion=recepcion.charAt(0);
+  parametro=recepcion.substring(1);
 
-      case 'b':mensajePantalla("INGRESO","AGUA DECLORADA");
-      break;
+//comprobación prescindible inicio
+Serial.print("operacion: ");
+Serial.println(operacion);
+Serial.print("parámetro: ");
+Serial.println(parametro);
+//comprobación prescindible fin
 
-      case 'c':mensajePantalla("INGRESO","SUCCION EXTERIOR");
-      break;
 
-      case 'd':mensajePantalla("TRASIEGO","OLLA COCCION");
-      break;
+//arbol de operaciones 
 
-      case 'e':mensajePantalla("TRASIEGO","MACERADOR");
-      break;
+switch(operacion){
 
-      case 'f':mensajePantalla("MACERADO","");
-      break;
+  
+     case 'a': 
+               
+                mensajePantalla("INGRESO","AGUA SIN FILTRAR "+parametro+ "L");
+                break;
+                
 
-      case 'z'://desactivar();
+      case 'b':
+                
+                mensajePantalla("INGRESO","AGUA DECLORADA "+parametro+ "L");
+                break;
+
+      case 'c':
+                mensajePantalla("INGRESO","SUCCION EXTERIOR "+parametro+ "L");
+                break;
+
+      case 'd':
+                mensajePantalla("TRASIEGO","OLLA COCCION");
+                break;
+
+      case 'e':
+                mensajePantalla("TRASIEGO","MACERADOR");
+                break;
+
+      case 'f':
+                mensajePantalla("MACERADO","");
+                break;
+
+      case 'z':
+                desactivar();
       break;
 
       case 'h':
+                mensajePantalla("OPERACION","NO DEFINIDA");
+          break;
+
+      case 'i':mensajePantalla("TRASIEGO","MACERADOR");
       break;
 
-      case 'i':
+      case 'j':mensajePantalla("TRASIEGO","MACERADOR");
       break;
 
-      case 'j':
-      break;
-
-      default: 
-              mensajePantalla("DIRECTIVA", "DESCONOCIDA");
-              delay(5000);
-              error=true;
+      default:
+              mensajePantalla("ERROR","DIRECTIVA DESCONOCIDA");
               
-      break;
-
-
-
+      
 }
 
-while(digitalRead(botonAceptar)==LOW || digitalRead(botonCancelar)==LOW || error==false){
+
+
+
+
+
+
+
+
+
+while(digitalRead(botonAceptar)==LOW && digitalRead(botonCancelar)==LOW && operacion!='z'){
+ 
+  digitalWrite(buzzer,HIGH);
+  digitalWrite(ledBT,LOW);
+  delay(500);
   
+  digitalWrite(buzzer,LOW);
+  digitalWrite(ledBT,HIGH);
+  delay(3000);
 }
+
+ 
 
   if(digitalRead(botonAceptar)==HIGH){
+  digitalWrite(buzzer,LOW);
+  digitalWrite(ledBT,LOW);
   Wire.beginTransmission(1);
-  Wire.write(recepcion);
+  Wire.write(operacion);
   Wire.endTransmission();
   delay(1000);
-}
-
-if(digitalRead(botonCancelar)==HIGH){
-  recepcion='z';
-  Wire.beginTransmission(1);
-  Wire.write('z');
-  Wire.endTransmission();
-  delay(1000);
+  
+}else if(digitalRead(botonCancelar)==HIGH ||operacion=='z'){
+  digitalWrite(buzzer,LOW);
+  digitalWrite(ledBT,LOW); 
+  lcd.clear();
+  lcd.display();
+  lcd.setCursor(1,0);
+  lcd.print("OPERACION CANCELADA ");
+  delay(5000);
   
 }
 
@@ -122,8 +232,20 @@ if(digitalRead(botonCancelar)==HIGH){
  
  }
 
-}
 
+
+
+
+
+
+
+
+
+
+
+//--------------------------------------------------------------Métodos Adicionales----------------------------------------------------------------------------------------------------------
+
+/* El siguiente método sirve para estandarizar los mensajes que serán mostrados en la pnatalla LCD con un formato definido para cada operación que se solicite*/
 void mensajePantalla(String operacion,String mensaje){
   lcd.clear();
                    lcd.display();
@@ -138,4 +260,11 @@ void mensajePantalla(String operacion,String mensaje){
                    lcd.setCursor(1,3);
                    lcd.print("ROJO  --> CANCELAR");
  
+}
+
+void desactivar(){
+  Wire.beginTransmission(1);
+  Wire.write('z');
+  Wire.endTransmission();
+  delay(1000);
 }
