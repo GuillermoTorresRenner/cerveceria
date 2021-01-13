@@ -60,7 +60,7 @@ void setup() {
 
 //--------------------------------------------------------------Programa----------------------------------------------------------------------------------------------------------
 void loop() {
-pruebas();
+
 
 
 
@@ -96,7 +96,7 @@ void receiveEvent(int howMany){
       case 'z':desactivar();
       break;
 
-      case 'h':
+      case 'h':refrigerar();
       break;
 
       case 'i':
@@ -210,47 +210,5 @@ void calentar(){
 }
 
 
-void pruebas(){
-    if(Serial.available()){
-      recepcion= Serial.read();
-  switch(recepcion){
-   
-      case 'a':entradaAguaSinFiltrar();
-      break;
 
-      case 'b':entradaAguaFiltrada();
-      break;
-
-      case 'c':entradaExterior();
-      break;
-
-      case 'd':trasiegoOlla();
-      break;
-
-      case 'e':trasiegoMacerador();
-      break;
-
-      case 'f':calentar();
-      break;
-
-      case 'z':desactivar();
-      
-      break;
-
-      case 'h':
-      break;
-
-      case 'i':
-      break;
-
-      case 'j':
-      break;
-
-      case 'k':
-      break;
-
-
-
-}
-  }
 }
